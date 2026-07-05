@@ -684,3 +684,13 @@ async def export_users():
     users = [dict(r) for r in db.execute("SELECT email, password_hash, keywords, plan, expire_date, created_at FROM users").fetchall()]
     db.close()
     return {"users": users}
+
+
+@app.get("/api/export-db")
+async def export_db():
+    """Download full database for backup."""
+    db_path = str(DB_PATH)
+    if not os.path.exists(db_path):
+        raise HTTPException(404, "No database found")
+    from fastapi.responses import FileResponse
+    return FileResponse(db_path, media_type="application/octet-stream", filename="bids.db")
