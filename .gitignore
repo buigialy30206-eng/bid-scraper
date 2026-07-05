@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+bids.db
+create_repo.py
+push.py
