@@ -473,21 +473,36 @@ async def pricing_page(request: Request):
 
 
 @app.get("/subscribe", response_class=HTMLResponse)
-async def subscribe_page(request: Request, plan: str = "pro"):
+async def subscribe_page(request: Request, plan: str = "pro", duration: str = "1month"):
     user = get_user_from_cookie(request.cookies.get("session"))
     if not user:
         return RedirectResponse("/login", 303)
 
-    price = "299" if plan == "enterprise" else "99"
+    prices = {
+        "pro": {"1month": ("99", "30"), "1year": ("799", "365"), "2year": ("1299", "730"), "3year": ("1799", "1095")},
+        "enterprise": {"1month": ("299", "30"), "1year": ("2399", "365"), "2year": ("3999", "730"), "3year": ("5499", "1095")},
+    }
+    duration_names = {"1month": "1个月", "1year": "1年", "2year": "2年", "3year": "3年"}
+
+    price, days = prices.get(plan, prices["pro"]).get(duration, ("99", "30"))
     plan_name = "企业版" if plan == "enterprise" else "专业版"
+    dur_name = duration_names.get(duration, "1个月")
 
     qr_url = os.environ.get("PAY_QR_URL", "")
     qr_html = f'<img src="{qr_url}" style="max-width:200px;border-radius:8px;margin:10px 0" alt="微信收款码">' if qr_url else ''
 
     content = f"""
-    <div class="form-card" style="max-width:500px">
-        <h2>订阅{plan_name}</h2>
-        <p class="subtitle">¥{price}/月 — 付款后24小时内开通</p>
+    <div class="form-card" style="max-width:550px">
+        <h2>订阅{plan_name} · {dur_name}</h2>
+        <p class="subtitle">¥{price} — 付款后24小时内开通</p>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+            <a href="?plan={plan}&duration=1month" class="btn-plan btn-plan-{'solid' if duration=='1month' else 'outline'}" style="flex:1;text-align:center;font-size:12px">1个月<br>¥{prices[plan]['1month'][0]}</a>
+            <a href="?plan={plan}&duration=1year" class="btn-plan btn-plan-{'solid' if duration=='1year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">1年<br>¥{prices[plan]['1year'][0]}</a>
+            <a href="?plan={plan}&duration=2year" class="btn-plan btn-plan-{'solid' if duration=='2year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">2年<br>¥{prices[plan]['2year'][0]}</a>
+            <a href="?plan={plan}&duration=3year" class="btn-plan btn-plan-{'solid' if duration=='3year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">3年<br>¥{prices[plan]['3year'][0]}</a>
+        </div>
+
         <div style="background:#f9fafb;padding:20px;border-radius:12px;margin:20px 0;text-align:center">
             <p style="font-size:14px;color:#666;margin-bottom:15px">微信扫码支付 ¥{price}</p>
             {qr_html}
@@ -495,6 +510,7 @@ async def subscribe_page(request: Request, plan: str = "pro"):
         </div>
         <form method="post" action="/subscribe">
             <input type="hidden" name="plan" value="{plan}">
+            <input type="hidden" name="duration" value="{duration}">
             <label>您的微信账号</label>
             <input type="text" name="pay_account" placeholder="微信号 / 手机号" required>
             <label>转账单号</label>
@@ -512,6 +528,7 @@ async def subscribe_page(request: Request, plan: str = "pro"):
 async def subscribe_post(
     request: Request,
     plan: str = Form("pro"),
+    duration: str = Form("1month"),
     pay_account: str = Form(""),
     pay_ref: str = Form(""),
 ):
@@ -519,13 +536,18 @@ async def subscribe_post(
     if not user:
         return RedirectResponse("/login", 303)
 
+    days_map = {"1month": 30, "1year": 365, "2year": 730, "3year": 1095}
+    days = days_map.get(duration, 30)
+    dur_names = {"1month": "1个月", "1year": "1年", "2year": "2年", "3year": "3年"}
+    dur_name = dur_names.get(duration, "1个月")
+
     # Send notification email to admin
     admin_email = os.environ.get("ADMIN_EMAIL", "")
     if admin_email:
         body = f"""
         <h3>新订阅申请</h3>
         <p>用户：{user['email']}</p>
-        <p>方案：{plan}</p>
+        <p>方案：{plan} · {dur_name}（{days}天）</p>
         <p>付款账号：{pay_account}</p>
         <p>交易号：{pay_ref}</p>
         <p>时间：{datetime.now()}</p>
@@ -534,9 +556,9 @@ async def subscribe_post(
 
     content = """
     <div class="form-card" style="text-align:center">
-        <h2>✅ 订阅申请已提交</h2>
+        <h2>订阅申请已提交</h2>
         <p style="margin:20px 0">我们会在24小时内审核并开通。如有疑问请加微信。</p>
-        <a href="/" class="btn btn-blue">返回首页</a>
+        <a href="/" class="btn" style="display:inline-block;padding:10px 24px;background:#1a56db;color:#fff;border-radius:6px;text-decoration:none">返回首页</a>
     </div>"""
     nav = '<a href="/">首页</a>'
     return BASE_HTML.replace("{title}", "提交成功").replace("{nav_links}", nav).replace("{content}", content)
