@@ -675,3 +675,12 @@ async def sync_data(request: Request):
     db.commit()
     db.close()
     return {"status": "ok", "imported": count}
+
+
+@app.get("/api/export-users")
+async def export_users():
+    """Export user data for local sync."""
+    db = get_db()
+    users = [dict(r) for r in db.execute("SELECT email, password_hash, keywords, plan, expire_date, created_at FROM users").fetchall()]
+    db.close()
+    return {"users": users}
