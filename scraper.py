@@ -7,6 +7,7 @@
 import re
 import sqlite3
 import time
+import base64
 import hashlib
 from datetime import datetime
 from pathlib import Path
@@ -185,14 +186,44 @@ def scrape():
             import requests as req
             db2 = sqlite3.connect(str(DB_PATH))
             db2.row_factory = sqlite3.Row
+
+            # Push new bids to Render
             all_bids = [dict(r) for r in db2.execute("SELECT * FROM bids").fetchall()]
-            db2.close()
             resp = req.post(
                 "https://bid-scraper-4k34.onrender.com/api/sync",
                 json={"bids": all_bids},
-                timeout=30
+                timeout=60
             )
-            print(f"  Sync to Render: {resp.status_code} - {resp.text[:100]}")
+            print(f"  Sync bids to Render: {resp.status_code}")
+
+            # Pull users from Render, merge into local DB
+            resp2 = req.get("https://bid-scraper-4k34.onrender.com/api/export-users", timeout=60)
+            if resp2.status_code == 200:
+                render_users = resp2.json().get("users", [])
+                for u in render_users:
+                    ex = db2.execute("SELECT id FROM users WHERE email=?", (u["email"],)).fetchone()
+                    if not ex:
+                        db2.execute(
+                            "INSERT INTO users (email, password_hash, keywords, plan, expire_date, created_at) VALUES (?,?,?,?,?,?)",
+                            (u["email"], u["password_hash"], u.get("keywords",""), u.get("plan","free"), u.get("expire_date",""), u.get("created_at",""))
+                        )
+                db2.commit()
+                print(f"  Pulled {len(render_users)} users from Render")
+
+            db2.close()
+
+            # Push updated DB to GitHub
+            with open(str(DB_PATH), "rb") as f:
+                db_content = base64.b64encode(f.read()).decode()
+            headers = {"Authorization": f"token {os.environ.get('GH_TOKEN','')}", "Accept": "application/vnd.github+json"}
+            if headers["Authorization"]:
+                r = req.get("https://api.github.com/repos/buigialy30206-eng/bid-scraper/contents/bids.db", headers=headers)
+                req.put(
+                    "https://api.github.com/repos/buigialy30206-eng/bid-scraper/contents/bids.db",
+                    headers=headers,
+                    json={"message": "Sync bids + users", "content": db_content, "sha": r.json().get("sha", "")}
+                )
+                print("  Pushed DB to GitHub")
         except Exception as e:
             print(f"  Sync failed: {e}")
 
