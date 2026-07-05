@@ -178,6 +178,24 @@ def scrape():
     db.commit()
     db.close()
     print(f"  新增: {new_count} 条")
+
+    # Sync to Render server
+    if new_count > 0:
+        try:
+            import requests as req
+            db2 = sqlite3.connect(str(DB_PATH))
+            db2.row_factory = sqlite3.Row
+            all_bids = [dict(r) for r in db2.execute("SELECT * FROM bids").fetchall()]
+            db2.close()
+            resp = req.post(
+                "https://bid-scraper-4k34.onrender.com/api/sync",
+                json={"bids": all_bids},
+                timeout=30
+            )
+            print(f"  Sync to Render: {resp.status_code} - {resp.text[:100]}")
+        except Exception as e:
+            print(f"  Sync failed: {e}")
+
     return new_count
 
 
