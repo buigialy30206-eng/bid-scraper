@@ -19,7 +19,29 @@ app = FastAPI(title="招标数据网", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+def init_db():
+    db = sqlite3.connect(str(DB_PATH))
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS bids (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            url TEXT NOT NULL,
+            category TEXT,
+            sub_category TEXT,
+            pub_date TEXT,
+            purchaser TEXT,
+            location TEXT,
+            project_type TEXT,
+            budget TEXT,
+            content TEXT,
+            crawled_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+    db.close()
+
 def query_db(sql: str, params: tuple = (), limit: int = 50) -> list[dict]:
+    init_db()
     db = sqlite3.connect(str(DB_PATH))
     db.row_factory = sqlite3.Row
     rows = db.execute(sql, params).fetchmany(limit)
