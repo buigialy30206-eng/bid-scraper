@@ -19,7 +19,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import requests
 
 BASE = Path(__file__).parent
-DB_PATH = BASE / "bids.db"
+import tempfile
+DB_PATH = Path(os.environ.get("DB_PATH", str(BASE / "bids.db")))
+
+# On Render, use /tmp so data survives between deploys (not Git-managed)
 
 app = FastAPI(title="招标数据网", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
