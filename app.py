@@ -27,6 +27,22 @@ DB_PATH = Path(os.environ.get("DB_PATH", str(BASE / "bids.db")))
 app = FastAPI(title="招标数据网", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+
+@app.on_event("startup")
+async def startup_seed():
+    """Auto-create tables and seed data if empty."""
+    init_all()
+    db = get_db()
+    count = db.execute("SELECT COUNT(*) as c FROM bids").fetchone()["c"]
+    db.close()
+    if count == 0:
+        print("[Startup] Empty database, running scraper...")
+        try:
+            import subprocess, sys
+            subprocess.run([sys.executable, str(BASE / "scraper.py")], timeout=120)
+        except Exception as e:
+            print(f"[Startup] Scraper failed: {e}")
+
 # ============ DATABASE ============
 
 def get_db():
