@@ -491,22 +491,52 @@ async def subscribe_page(request: Request, plan: str = "pro", duration: str = "1
     qr_url = os.environ.get("PAY_QR_URL", "")
     qr_html = f'<img src="{qr_url}" style="max-width:200px;border-radius:8px;margin:10px 0" alt="微信收款码">' if qr_url else ''
 
-    content = f"""
-    <div class="form-card" style="max-width:550px">
-        <h2>订阅{plan_name} · {dur_name}</h2>
-        <p class="subtitle">¥{price} — 付款后24小时内开通</p>
+    savings = {"1month": "", "1year": "省 ¥389", "2year": "省 ¥1,077", "3year": "省 ¥1,769"}
+    per_month = {"1month": "¥99/月", "1year": "≈¥67/月", "2year": "≈¥54/月", "3year": "≈¥50/月"}
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-            <a href="?plan={plan}&duration=1month" class="btn-plan btn-plan-{'solid' if duration=='1month' else 'outline'}" style="flex:1;text-align:center;font-size:12px">1个月<br>¥{prices[plan]['1month'][0]}</a>
-            <a href="?plan={plan}&duration=1year" class="btn-plan btn-plan-{'solid' if duration=='1year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">1年<br>¥{prices[plan]['1year'][0]}</a>
-            <a href="?plan={plan}&duration=2year" class="btn-plan btn-plan-{'solid' if duration=='2year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">2年<br>¥{prices[plan]['2year'][0]}</a>
-            <a href="?plan={plan}&duration=3year" class="btn-plan btn-plan-{'solid' if duration=='3year' else 'outline'}" style="flex:1;text-align:center;font-size:12px">3年<br>¥{prices[plan]['3year'][0]}</a>
+    options_html = ""
+    for d in ["1month", "1year", "2year", "3year"]:
+        active = "active" if duration == d else ""
+        save = savings[d]
+        pm = per_month[d]
+        p = prices[plan][d][0]
+        options_html += f"""
+        <label class="dur-option {active}">
+            <input type="radio" name="dur_radio" onchange="location.href='?plan={plan}&duration={d}'" {'checked' if active else ''}>
+            <div class="dur-card">
+                <div class="dur-name">{duration_names[d]}</div>
+                <div class="dur-price">¥{p}</div>
+                <div class="dur-sub">{pm}</div>
+                {f'<div class="dur-badge">{save}</div>' if save else ''}
+            </div>
+        </label>"""
+
+    content = f"""<style>
+.dur-selector{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}}
+.dur-option input{{display:none}}
+.dur-option{{cursor:pointer}}
+.dur-card{{background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:16px 10px;text-align:center;transition:all .2s;position:relative}}
+.dur-option:hover .dur-card{{border-color:#93c5fd}}
+.dur-option.active .dur-card{{border-color:#1a56db;background:#eff6ff;box-shadow:0 0 0 3px rgba(26,86,219,0.1)}}
+.dur-name{{font-size:14px;font-weight:600;color:#374151;margin-bottom:4px}}
+.dur-price{{font-size:22px;font-weight:800;color:#1a56db;line-height:1.2}}
+.dur-sub{{font-size:11px;color:#9ca3af;margin-top:2px}}
+.dur-badge{{position:absolute;top:-10px;right:-6px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap}}
+@media(max-width:500px){{.dur-selector{{grid-template-columns:repeat(2,1fr)}}}}
+</style>
+    <div class="form-card" style="max-width:580px">
+        <h2>订阅{plan_name}</h2>
+        <p class="subtitle">选择时长，扫码支付</p>
+
+        <div class="dur-selector">
+            {options_html}
         </div>
 
-        <div style="background:#f9fafb;padding:20px;border-radius:12px;margin:20px 0;text-align:center">
-            <p style="font-size:14px;color:#666;margin-bottom:15px">微信扫码支付 ¥{price}</p>
+        <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);padding:28px;border-radius:16px;margin:20px 0;text-align:center;border:2px solid #bae6fd">
+            <p style="font-size:13px;color:#6b7280;margin-bottom:8px">微信扫码支付</p>
+            <p style="font-size:28px;font-weight:800;color:#1a56db;margin-bottom:12px">¥{price}</p>
             {qr_html}
-            {f'<p style="font-size:12px;color:#999;margin-top:10px">如无法扫码，联系微信：{os.environ.get("WECHAT_ID","")}</p>' if os.environ.get("WECHAT_ID","") else ''}
+            {f'<p style="font-size:12px;color:#9ca3af;margin-top:12px">扫码有问题？加微信：{os.environ.get("WECHAT_ID","")}</p>' if os.environ.get("WECHAT_ID","") else ''}
         </div>
         <form method="post" action="/subscribe">
             <input type="hidden" name="plan" value="{plan}">
