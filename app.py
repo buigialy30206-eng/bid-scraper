@@ -598,3 +598,31 @@ async def admin_activate(request: Request, user_id: int):
     db.commit()
     db.close()
     return RedirectResponse("/admin", 303)
+
+
+@app.post("/api/sync")
+async def sync_data(request: Request):
+    """Sync endpoint: local scraper pushes new bids here."""
+    try:
+        data = await request.json()
+    except:
+        raise HTTPException(400, "Invalid JSON")
+
+    db = get_db()
+    count = 0
+    for bid in data.get("bids", []):
+        existing = db.execute("SELECT id FROM bids WHERE id=?", (bid.get("id", ""),)).fetchone()
+        if not existing:
+            db.execute(
+                """INSERT INTO bids (id, title, url, category, sub_category, pub_date,
+                   purchaser, location, project_type, budget, content)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (bid.get("id"), bid.get("title"), bid.get("url"), bid.get("category"),
+                 bid.get("sub_category"), bid.get("pub_date"), bid.get("purchaser"),
+                 bid.get("location"), bid.get("project_type"), bid.get("budget"),
+                 bid.get("content")),
+            )
+            count += 1
+    db.commit()
+    db.close()
+    return {"status": "ok", "imported": count}
