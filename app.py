@@ -465,25 +465,27 @@ async def subscribe_page(request: Request, plan: str = "pro"):
     price = "299" if plan == "enterprise" else "99"
     plan_name = "企业版" if plan == "enterprise" else "专业版"
 
+    qr_url = os.environ.get("PAY_QR_URL", "")
+    qr_html = f'<img src="{qr_url}" style="max-width:200px;border-radius:8px;margin:10px 0" alt="微信收款码">' if qr_url else ''
+
     content = f"""
     <div class="form-card" style="max-width:500px">
-        <h2>💳 订阅{plan_name} — ¥{price}/月</h2>
-        <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0;text-align:center">
-            <p style="font-size:14px;color:#666;margin-bottom:15px">请转账至以下账户，然后提交转账信息</p>
-            <p style="font-size:18px;font-weight:600">💰 支付宝/微信</p>
-            <p style="font-size:24px;font-weight:700;color:#1a56db">¥{price}</p>
-            <p style="font-size:12px;color:#999;margin-top:10px">付款备注：{user['email']}</p>
-            <p style="font-size:12px;color:#999">或联系微信：your_wechat_id</p>
+        <h2>订阅{plan_name}</h2>
+        <p class="subtitle">¥{price}/月 — 付款后24小时内开通</p>
+        <div style="background:#f9fafb;padding:20px;border-radius:12px;margin:20px 0;text-align:center">
+            <p style="font-size:14px;color:#666;margin-bottom:15px">微信扫码支付 ¥{price}</p>
+            {qr_html}
+            {f'<p style="font-size:12px;color:#999;margin-top:10px">如无法扫码，联系微信：{os.environ.get("WECHAT_ID","")}</p>' if os.environ.get("WECHAT_ID","") else ''}
         </div>
         <form method="post" action="/subscribe">
             <input type="hidden" name="plan" value="{plan}">
-            <input type="text" name="pay_account" placeholder="您的支付宝/微信账号" required>
-            <input type="text" name="pay_ref" placeholder="转账单号/交易号（用于验证）" required>
-            <button type="submit">提交，等待开通</button>
+            <label>您的微信账号</label>
+            <input type="text" name="pay_account" placeholder="微信号 / 手机号" required>
+            <label>转账单号</label>
+            <input type="text" name="pay_ref" placeholder="微信转账单号（用于验证）" required>
+            <button type="submit" class="btn-full">提交，等待开通</button>
         </form>
-        <p style="text-align:center;margin-top:15px;font-size:12px;color:#999">
-            提交后24小时内开通。如需加急请联系微信客服。
-        </p>
+        <p class="footer-text">24小时内审核开通，如有问题联系客服</p>
     </div>"""
 
     nav = f'<a href="/">首页</a> <a href="/logout">退出</a>'
