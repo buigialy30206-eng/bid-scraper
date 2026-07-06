@@ -459,7 +459,7 @@ async def pricing_page(request: Request):
                     <li>API 接口接入</li>
                     <li>专属技术支持</li>
                 </ul>
-                <a href="/subscribe?plan=enterprise" class="btn-plan btn-plan-outline">联系客服</a>
+                <a href="/subscribe?plan=enterprise" class="btn-plan btn-plan-solid">立即订阅</a>
             </div>
         </div>
     </div>"""
@@ -516,7 +516,7 @@ async def subscribe_page(request: Request, plan: str = "pro", duration: str = "1
 .dur-option input{{display:none}}
 .dur-option{{cursor:pointer}}
 .dur-card{{background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:16px 10px;text-align:center;transition:all .2s;position:relative}}
-.dur-option:hover .dur-card{{border-color:#93c5fd}}
+.dur-option:hover .dur-card{{border-color:#1a56db!important;box-shadow:0 0 0 3px rgba(26,86,219,0.1)!important}}
 .dur-option.active .dur-card{{border-color:#1a56db;background:#eff6ff;box-shadow:0 0 0 3px rgba(26,86,219,0.1)}}
 .dur-name{{font-size:14px;font-weight:600;color:#374151;margin-bottom:4px}}
 .dur-price{{font-size:22px;font-weight:800;color:#1a56db;line-height:1.2}}
