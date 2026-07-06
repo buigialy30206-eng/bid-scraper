@@ -41,6 +41,8 @@ LIST_URLS = [
     ("http://www.ccgp.gov.cn/cggg/dfgg/index.htm", "地方公告"),
 ]
 
+MAX_PAGES = 5  # 每板块抓5页 = 100条/板块
+
 
 def init_db():
     db = sqlite3.connect(str(DB_PATH))
@@ -145,9 +147,16 @@ def scrape():
 
     items = []
     for url, category_name in LIST_URLS:
-        section_items = fetch_list_page(url, category_name)
-        items.extend(section_items)
-        print(f"  {category_name}: {len(section_items)} 条")
+        # Scrape multiple pages
+        total_section = 0
+        for page in range(1, MAX_PAGES + 1):
+            page_url = url if page == 1 else url.replace("index.htm", f"index_{page}.htm")
+            section_items = fetch_list_page(page_url, category_name)
+            items.extend(section_items)
+            total_section += len(section_items)
+            if len(section_items) < 20:
+                break  # No more pages
+        print(f"  {category_name}: {total_section} 条 ({min(page, MAX_PAGES)}页)")
 
     print(f"  列表获取: {len(items)} 条")
 
