@@ -35,7 +35,10 @@ CATEGORIES = {
     "zbjg": "中标公告",
 }
 
-LIST_URL = "http://www.ccgp.gov.cn/cggg/zygg/index.htm"
+LIST_URLS = [
+    ("http://www.ccgp.gov.cn/cggg/zygg/index.htm", "中央公告"),
+    ("http://www.ccgp.gov.cn/cggg/dfgg/index.htm", "地方公告"),
+]
 
 
 def init_db():
@@ -63,34 +66,33 @@ def init_db():
     return db
 
 
-def fetch_list_page() -> list[dict]:
+def fetch_list_page(url: str, category_name: str) -> list[dict]:
     """抓取列表页，返回所有招标条目"""
-    resp = requests.get(LIST_URL, headers=HEADERS, timeout=15)
+    resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.encoding = "utf-8"
     soup = BeautifulSoup(resp.text, "html.parser")
 
     results = []
-    # 找到所有公告链接（在 ul.vT-srch-result-list-bid 或类似容器中）
     for a in soup.select("a[target='_blank']"):
         href = a.get("href", "")
         title = a.get("title", "") or a.text.strip()
         if not title or len(title) < 5:
             continue
 
-        # 解析分类：./jzxcs/202607/t20260705_xxx.htm
         match = re.match(r"\./(\w+)/(\d{6})/t(\d{8})_(\d+)\.htm", href)
         if match:
             sub_cat = match.group(1)
-            # 生成绝对URL
-            url = f"http://www.ccgp.gov.cn/cggg/zygg/{href.lstrip('./')}"
-            bid_id = f"{match.group(3)}_{match.group(4)}"
+            # Base path depends on section
+            base_path = url.replace("index.htm", "")
+            url_full = "http://www.ccgp.gov.cn" + base_path.replace("http://www.ccgp.gov.cn", "") + href.lstrip("./")
+            bid_id = f"{category_name}_{match.group(3)}_{match.group(4)}"
 
             results.append({
                 "id": bid_id,
                 "title": title,
-                "url": url,
+                "url": url_full,
                 "sub_category": CATEGORIES.get(sub_cat, sub_cat),
-                "category": "中央公告",
+                "category": category_name,
             })
 
     return results
@@ -140,8 +142,12 @@ def scrape():
     print(f"[{datetime.now()}] 开始抓取中国政府采购网...")
     db = init_db()
 
-    # 1. 抓列表
-    items = fetch_list_page()
+    items = []
+    for url, category_name in LIST_URLS:
+        section_items = fetch_list_page(url, category_name)
+        items.extend(section_items)
+        print(f"  {category_name}: {len(section_items)} 条")
+
     print(f"  列表获取: {len(items)} 条")
 
     new_count = 0
