@@ -322,7 +322,7 @@ async def home_page(request: Request, keyword: str = Query(""), category: str = 
         <div class="stats-bar">
             <span>📊 共 {total} 条公告</span>
             <span>📅 最新：{last_update}</span>
-            {'<span style="color:#1a56db">✅ 专业版 · 全量数据</span>' if premium else '<span style="color:#f59e0b">⚠ 免费版 · 仅3天</span>'}
+            {'<span style="color:#1a56db">✅ 专业版 · 全量数据</span>' if premium else '<span style="color:#f59e0b">⚠ 免费版 · 仅50条</span>'}
         </div>
     </div>
     <div class="bid-list">
