@@ -252,10 +252,10 @@ async def home_page(request: Request, keyword: str = Query(""), category: str = 
     last = db.execute("SELECT pub_date FROM bids ORDER BY pub_date DESC LIMIT 1").fetchone()
     last_update = last["pub_date"] if last else "暂无"
 
-    # Premium: full data, Free: last 3 days
-    date_filter = "" if premium else " AND pub_date >= date('now', '-3 days')"
+    # Premium: full data, Free: 50 records max
+    limit_clause = "" if premium else "LIMIT 50"
 
-    sql = f"SELECT * FROM bids WHERE 1=1{date_filter}"
+    sql = f"SELECT * FROM bids WHERE 1=1"
     params = []
     if keyword:
         sql += " AND (title LIKE ? OR purchaser LIKE ?)"
@@ -267,7 +267,9 @@ async def home_page(request: Request, keyword: str = Query(""), category: str = 
     if location:
         sql += " AND location LIKE ?"
         params.append(f"%{location}%")
-    sql += " ORDER BY pub_date DESC LIMIT 50"
+    sql += " ORDER BY pub_date DESC"
+    if not premium:
+        sql += " LIMIT 50"
     bids = [dict(r) for r in db.execute(sql, tuple(params)).fetchmany(50)]
     db.close()
 
@@ -290,8 +292,8 @@ async def home_page(request: Request, keyword: str = Query(""), category: str = 
     if not premium:
         bid_html += f"""
         <div class="locked-section">
-            <h3>🔒 仅显示近3天数据</h3>
-            <p>订阅专业版查看全部 {total - len(bids)} 条历史公告 + 每日关键词推送</p>
+            <h3>🔒 仅显示 50 条数据</h3>
+            <p>订阅专业版查看全部 {total} 条历史公告 + 每日关键词推送</p>
             <a href="/pricing" class="btn">¥99/月 立即订阅</a>
         </div>"""
 
