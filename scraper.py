@@ -71,7 +71,7 @@ def init_db():
 
 def fetch_list_page(url: str, category_name: str) -> list[dict]:
     """抓取列表页，返回所有招标条目"""
-    resp = requests.get(url, headers=HEADERS, timeout=15)
+    resp = requests.get(url, headers=HEADERS, timeout=15, proxies={"http": None, "https": None})
     resp.encoding = "utf-8"
     soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -104,7 +104,7 @@ def fetch_list_page(url: str, category_name: str) -> list[dict]:
 def fetch_detail(url: str) -> dict:
     """抓取详情页，提取结构化信息"""
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp = requests.get(url, headers=HEADERS, timeout=15, proxies={"http": None, "https": None})
         resp.encoding = "utf-8"
     except Exception:
         return {}
@@ -200,6 +200,7 @@ def scrape():
     if new_count > 0:
         try:
             import requests as req
+            NO_PROXY = dict(http=None, https=None)
             db2 = sqlite3.connect(str(DB_PATH))
             db2.row_factory = sqlite3.Row
 
@@ -208,12 +209,12 @@ def scrape():
             resp = req.post(
                 "https://bid-scraper-4k34.onrender.com/api/sync",
                 json={"bids": all_bids},
-                timeout=60
+                timeout=60, proxies=NO_PROXY
             )
             print(f"  Sync bids to Render: {resp.status_code}")
 
             # Pull users from Render, merge into local DB
-            resp2 = req.get("https://bid-scraper-4k34.onrender.com/api/export-users", timeout=60)
+            resp2 = req.get("https://bid-scraper-4k34.onrender.com/api/export-users", timeout=60, proxies=NO_PROXY)
             if resp2.status_code == 200:
                 render_users = resp2.json().get("users", [])
                 for u in render_users:
@@ -233,10 +234,10 @@ def scrape():
                 db_content = base64.b64encode(f.read()).decode()
             headers = {"Authorization": f"token {os.environ.get('GH_TOKEN','')}", "Accept": "application/vnd.github+json"}
             if headers["Authorization"]:
-                r = req.get("https://api.github.com/repos/buigialy30206-eng/bid-scraper/contents/bids.db", headers=headers)
+                r = req.get("https://api.github.com/repos/buigialy30206-eng/bid-scraper/contents/bids.db", headers=headers, proxies=NO_PROXY)
                 req.put(
                     "https://api.github.com/repos/buigialy30206-eng/bid-scraper/contents/bids.db",
-                    headers=headers,
+                    headers=headers, proxies=NO_PROXY,
                     json={"message": "Sync bids + users", "content": db_content, "sha": r.json().get("sha", "")}
                 )
                 print("  Pushed DB to GitHub")
