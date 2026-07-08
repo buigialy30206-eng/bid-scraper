@@ -20,7 +20,7 @@ def backup():
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
-        resp = requests.get(RENDER_URL, timeout=60)
+        resp = requests.get(RENDER_URL, timeout=60, proxies=dict(http=None, https=None))
         if resp.status_code != 200:
             print(f"Backup failed: HTTP {resp.status_code}")
             return
